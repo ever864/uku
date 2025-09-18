@@ -1,0 +1,52 @@
+# Dependencias
+/node_modules/
+/bower_components/
+
+# Builds de React
+/build/
+/dist/
+/out/
+
+# Archivos de logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Configuración de editores/IDEs
+.vscode/
+.idea/
+*.swp
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+
+# Cachés
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.next/
+coverage/
+*.tsbuildinfo
+
+# Electron
+# Binaries que genera electron-builder o electron-forge
+/release/
+/app/dist/
+/*.asar
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
