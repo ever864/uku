@@ -1,4 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron";
+import {
+  app,
+  shell,
+  BrowserWindow,
+  Menu,
+  MenuItemConstructorOptions,
+  ipcMain,
+} from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
@@ -9,13 +16,73 @@ function createWindow(): void {
     width: 900,
     height: 670,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
     },
   });
+
+  const menuTemplate: MenuItemConstructorOptions[] = [
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "New",
+          accelerator: "CmdOrCtrl+N",
+          click: () => {
+            mainWindow.webContents.send("menu-new");
+          },
+        },
+        {
+          label: "Open",
+          accelerator: "CmdOrCtrl+O",
+          click: () => {
+            mainWindow.webContents.send("menu-open");
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Exit",
+          click: () => {
+            app.quit();
+          },
+        },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        {
+          role: "reload",
+        },
+        {
+          role: "toggleDevTools",
+        },
+        {
+          type: "separator",
+        },
+        {
+          role: "togglefullscreen",
+        },
+      ],
+    },
+  ];
+
+  const appMenu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(appMenu);
 
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
