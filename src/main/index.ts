@@ -5,6 +5,7 @@ import {
   Menu,
   MenuItemConstructorOptions,
   ipcMain,
+  dialog,
 } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
@@ -38,8 +39,19 @@ function createWindow(): void {
         {
           label: "Open",
           accelerator: "CmdOrCtrl+O",
-          click: () => {
-            mainWindow.webContents.send("menu-open");
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ["openFile"],
+              filters: [
+                { name: "PDF Files", extensions: ["pdf"] },
+                { name: "All Files", extensions: ["*"] },
+              ],
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              const filePath = result.filePaths[0];
+              mainWindow.webContents.send("menu-open", filePath);
+            }
           },
         },
         { type: "separator" },
