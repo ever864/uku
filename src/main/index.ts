@@ -11,52 +11,98 @@ import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: false,
-    ...(process.platform === "linux" ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
-      sandbox: false,
-    },
-  });
+let recentFiles: string[] = [];
+let mainWindow: BrowserWindow | null = null;
 
-  const menuTemplate: MenuItemConstructorOptions[] = [
+function addRecentFile(filePath: string): void {
+  const index = recentFiles.indexOf(filePath);
+
+  if (index !== -1) {
+    recentFiles.splice(index, 1);
+  }
+
+  recentFiles.unshift(filePath);
+
+  if (recentFiles.length > 10) {
+    recentFiles = recentFiles.slice(0, 10);
+  }
+
+  rebuildMenu();
+}
+
+function clearRecentFiles(): void {
+  recentFiles = [];
+  app.clearRecentDocuments();
+  rebuildMenu();
+}
+
+function createRecentFilesSubmenu(): MenuItemConstructorOptions[] {
+  if (recentFiles.length === 0) {
+    return [
+      {
+        label: "No hay archivos recientes",
+        enabled: false,
+      },
+    ];
+  }
+
+  const recentItems: MenuItemConstructorOptions[] = recentFiles.map(
+    (filePath) => ({
+      label: filePath,
+      click: () => {
+        if (mainWindow) {
+          mainWindow.webContents.send("menu-open", filePath);
+        }
+      },
+    }),
+  );
+
+  recentItems.push(
+    { type: "separator" },
     {
-      label: "File",
+      label: "Limpiar recientes",
+      click: clearRecentFiles,
+    },
+  );
+
+  return recentItems;
+}
+
+function createMenuTemplate(): MenuItemConstructorOptions[] {
+  return [
+    {
+      label: "Archivo",
       submenu: [
         {
-          label: "New",
-          accelerator: "CmdOrCtrl+N",
-          click: () => {
-            mainWindow.webContents.send("menu-new");
-          },
-        },
-        {
-          label: "Open",
+          label: "Abrir",
           accelerator: "CmdOrCtrl+O",
           click: async () => {
+            if (!mainWindow) return;
+
             const result = await dialog.showOpenDialog(mainWindow, {
               properties: ["openFile"],
               filters: [
-                { name: "PDF Files", extensions: ["pdf"] },
-                { name: "All Files", extensions: ["*"] },
+                { name: "Archivos PDF", extensions: ["pdf"] },
+                { name: "Todos los archivos", extensions: ["*"] },
               ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
               const filePath = result.filePaths[0];
+
+              app.addRecentDocument(filePath);
+              addRecentFile(filePath);
               mainWindow.webContents.send("menu-open", filePath);
             }
           },
         },
+        {
+          label: "Abrir recientes",
+          submenu: createRecentFilesSubmenu(),
+        },
         { type: "separator" },
         {
-          label: "Exit",
+          label: "Salir",
           click: () => {
             app.quit();
           },
@@ -64,7 +110,7 @@ function createWindow(): void {
       ],
     },
     {
-      label: "Edit",
+      label: "Editar",
       submenu: [
         { role: "undo" },
         { role: "redo" },
@@ -75,7 +121,7 @@ function createWindow(): void {
       ],
     },
     {
-      label: "View",
+      label: "Ver",
       submenu: [
         {
           role: "reload",
@@ -92,12 +138,36 @@ function createWindow(): void {
       ],
     },
   ];
+}
 
+function rebuildMenu(): void {
+  const menuTemplate = createMenuTemplate();
   const appMenu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(appMenu);
+}
+
+function createWindow(): void {
+  // Create the browser window.
+  mainWindow = new BrowserWindow({
+    width: 900,
+    height: 670,
+    show: false,
+    autoHideMenuBar: false,
+    ...(process.platform === "linux" ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false,
+    },
+  });
+
+  rebuildMenu();
 
   mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
+    mainWindow?.show();
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
