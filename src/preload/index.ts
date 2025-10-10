@@ -9,6 +9,7 @@ const api = {};
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
+    //expose api to renderer
     contextBridge.exposeInMainWorld("electron", electronAPI);
     contextBridge.exposeInMainWorld("api", api);
 
